@@ -44,7 +44,7 @@ python scripts/remove_pytorch_module.py
 
 #### 4. Test a model
 
-Donwload pretrained weights from [[Google Drive]]https://drive.google.com/drive/folders/1NbV3NZlgbqnLSd9zwZoz8kFpNQjUYolT?usp=sharing
+Donwload pretrained weights from [[Google Drive]](https://drive.google.com/drive/folders/1NbV3NZlgbqnLSd9zwZoz8kFpNQjUYolT?usp=sharing)
 
 ```python
 python tools/test.py
@@ -58,7 +58,7 @@ python scripts/convert_torchscript.py
 
 ### Tensorflow == 2.x
 
-#### 1. Download the data. (Refer: [[Tensorflow Dataset API]]https://github.com/tensorflow/datasets)
+#### 1. Download the data. (Refer: [[Tensorflow Dataset API]](https://github.com/tensorflow/datasets))
 
 ```bash
 python -m tensorflow_datasets.scripts.download_and_prepare --datasets=places365_small
