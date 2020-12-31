@@ -1,6 +1,6 @@
 # Scene-Recognition-Service-PyTorch-TF2.0
 
-Scene recognition models based on pytorch and TF2.0. Upgraded from https://github.com/CSAILVision/places365
+Scene recognition models based on pytorch and TF2.0. Upgraded from [[MIT Place365]](https://github.com/CSAILVision/places365)
 
 ## Install
 
@@ -18,7 +18,7 @@ Please refer [[Model Zoo]](model_zoo.md)
 
 ## Train
 
-We download the data from http://places2.csail.mit.edu/download.html
+We download the data from [[Place2 Data]](http://places2.csail.mit.edu/download.html)
 
 ### PyTorch == 1.x
 
@@ -44,7 +44,7 @@ python scripts/remove_pytorch_module.py
 
 #### 4. Test a model
 
-Donwload pretrained weights from https://drive.google.com/drive/folders/1NbV3NZlgbqnLSd9zwZoz8kFpNQjUYolT?usp=sharing
+Donwload pretrained weights from [[Google Drive]]https://drive.google.com/drive/folders/1NbV3NZlgbqnLSd9zwZoz8kFpNQjUYolT?usp=sharing
 
 ```python
 python tools/test.py
@@ -58,7 +58,7 @@ python scripts/convert_torchscript.py
 
 ### Tensorflow == 2.x
 
-#### 1. Download the data. (Refer: https://github.com/tensorflow/datasets)
+#### 1. Download the data. (Refer: [[Tensorflow Dataset API]]https://github.com/tensorflow/datasets)
 
 ```bash
 python -m tensorflow_datasets.scripts.download_and_prepare --datasets=places365_small
