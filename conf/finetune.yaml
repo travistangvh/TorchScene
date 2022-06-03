@@ -1,0 +1,23 @@
+data_path: E://places365_standard/
+log_dir: logs
+device: cuda:0
+weight_dir: ../checkpoints
+arch: vision_transformer
+workers: 6
+epochs: 7
+start_epoch: 0
+batch_size: 128
+lr: 1e-3
+momentum: 0.9
+weight_decay: 0.03
+print_freq: 10
+resume: False
+evaluate: False
+pretrained: False
+feature_extract: False
+num_classes: 365
+dataset: places365
+
+hydra:
+  run:
+    dir: ../logs/${now:%Y-%m-%d}/${now:%H-%M-%S}
