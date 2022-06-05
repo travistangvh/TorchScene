@@ -7,8 +7,11 @@ import torch
 from omegaconf import DictConfig
 from torch import nn, optim
 from torch.utils.data import DataLoader
+from torchmetrics.functional import accuracy
 from torchvision import datasets, transforms
 import torchvision.models as models
+
+from utils.meter import AverageMeter, ProgressMeter
 from utils.miscellaneous import collect_env_info, mkdir
 
 
@@ -36,7 +39,7 @@ def main(cfgs: DictConfig):
                 input_size,
                 interpolation=transforms.InterpolationMode.BICUBIC,
             ),
-            transforms.RandomHorizontalFlip(),
+            transforms.CenterCrop(input_size),
             transforms.ToTensor(),
             transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
         ]),
@@ -92,34 +95,41 @@ def main(cfgs: DictConfig):
     criterion = nn.CrossEntropyLoss()
 
     # Train and evaluate
-    model_ft, hist = train_model(model, dataloaders_dict, device, criterion, optimizer_ft, logger, num_epochs=cfgs.epochs,
-                                 is_inception=(cfgs.arch == "inception"))
+    model_ft = train_model(model, dataloaders_dict, device, criterion, optimizer_ft, logger,
+                                 print_freq=cfgs.print_freq, num_epochs=cfgs.epochs, is_inception=(cfgs.arch == "inception"))
     mkdir(cfgs.weight_dir)
     torch.save(model_ft.state_dict(), os.path.join(cfgs.weight_dir, cfgs.arch) + '.ckpt')
     logger.info("model is saved at {}".format(os.path.abspath(os.path.join(cfgs.weight_dir, cfgs.arch) + '.ckpt')))
 
 
-def train_model(model, dataloaders, device, criterion, optimizer, logger, num_epochs, is_inception=False):
+def train_model(model, dataloaders, device, criterion, optimizer, logger, print_freq, num_epochs, is_inception=False):
     since = time.time()
-    val_acc_history = []
     best_model_wts = copy.deepcopy(model.state_dict())
-    best_acc = 0.0
     for epoch in range(num_epochs):
-        logger.info('Epoch {}/{}'.format(epoch, num_epochs - 1))
-        logger.info('-' * 10)
-
         # Each epoch has a training and validation phase
         for phase in ['train', 'val']:
+            # statistics
+            batch_time = AverageMeter('Time', ':6.3f')
+            data_time = AverageMeter('Data', ':6.3f')
+            losses = AverageMeter('Loss', ':.4e')
+            top1 = AverageMeter('Acc@1', ':6.2f')
+            top5 = AverageMeter('Acc@5', ':6.2f')
+            progress = ProgressMeter(
+                len(dataloaders[phase]),
+                [batch_time, data_time, losses, top1, top5],
+                prefix="Epoch: [{}]".format(epoch))
+
             if phase == 'train':
                 model.train()  # Set model to training mode
             else:
                 model.eval()   # Set model to evaluate mode
 
-            running_loss = 0.0
-            running_corrects = 0
-
             # Iterate over data.
-            for inputs, labels in dataloaders[phase]:
+            end = time.time()
+            for i, (inputs, labels) in enumerate(dataloaders[phase]):
+                # measure data loading time
+                data_time.update(time.time() - end)
+
                 inputs = inputs.to(device)
                 labels = labels.to(device)
 
@@ -143,37 +153,31 @@ def train_model(model, dataloaders, device, criterion, optimizer, logger, num_ep
                         outputs = model(inputs)
                         loss = criterion(outputs, labels)
 
-                    _, preds = torch.max(outputs, 1)
-
                     # backward + optimize only if in training phase
                     if phase == 'train':
                         loss.backward()
                         optimizer.step()
 
-                # statistics
-                running_loss += loss.item() * inputs.size(0)
-                running_corrects += torch.sum(preds == labels.data)
+                # measure accuracy and record loss
+                acc1 = accuracy(outputs, labels, top_k=1)
+                acc5 = accuracy(outputs, labels, top_k=5)
+                losses.update(loss.item(), inputs.size(0))
+                top1.update(acc1, inputs.size(0))
+                top5.update(acc5, inputs.size(0))
 
-            epoch_loss = running_loss / len(dataloaders[phase].dataset)
-            epoch_acc = running_corrects.double() / len(dataloaders[phase].dataset)
 
-            logger.info('{} Loss: {:.4f} Acc: {:.4f}'.format(phase, epoch_loss, epoch_acc))
-
-            # deep copy the model
-            if phase == 'val' and epoch_acc > best_acc:
-                best_acc = epoch_acc
-                best_model_wts = copy.deepcopy(model.state_dict())
-            if phase == 'val':
-                val_acc_history.append(epoch_acc)
-
+                # measure elapsed time
+                batch_time.update(time.time() - end)
+                end = time.time()
+                if i % print_freq == 0:
+                    logger.info(progress.display(i))
     time_elapsed = time.time() - since
     logger.info('Training complete in {:.0f}m {:.0f}s'.format(time_elapsed // 60, time_elapsed % 60))
-    logger.info('Best val Acc: {:4f}'.format(best_acc))
 
     # load best model weights
     model.load_state_dict(best_model_wts)
 
-    return model, val_acc_history
+    return model
 
 
 def set_parameter_requires_grad(model, feature_extracting):
@@ -196,6 +200,7 @@ def initialize_model(model_name, num_classes, feature_extract, logger, use_pretr
         """ Resnet18
         """
         model_ft = models.resnet18(pretrained=use_pretrained)
+
         set_parameter_requires_grad(model_ft, feature_extract)
         num_ftrs = model_ft.fc.in_features
         model_ft.fc = nn.Linear(num_ftrs, num_classes)
@@ -204,7 +209,7 @@ def initialize_model(model_name, num_classes, feature_extract, logger, use_pretr
     elif model_name == "alexnet":
         """ Alexnet
         """
-        model_ft = models.alexnet(pretrained=use_pretrained, num_classes=use_pretrained)
+        model_ft = models.alexnet(pretrained=use_pretrained)
         set_parameter_requires_grad(model_ft, feature_extract)
         num_ftrs = model_ft.classifier[6].in_features
         model_ft.classifier[6] = nn.Linear(num_ftrs, num_classes)

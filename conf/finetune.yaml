@@ -1,4 +1,4 @@
-data_path: E://places365_standard/
+data_path: /root/TorchScene/places365_standard/
 log_dir: logs
 device: cuda:0
 weight_dir: ../checkpoints
@@ -7,17 +7,17 @@ workers: 6
 epochs: 7
 start_epoch: 0
 batch_size: 128
-lr: 1e-3
+lr: 1e-4
 momentum: 0.9
-weight_decay: 0.03
-print_freq: 10
+weight_decay: 1e-5
+print_freq: 100
 resume: False
 evaluate: False
-pretrained: False
+pretrained: True
 feature_extract: False
 num_classes: 365
 dataset: places365
 
 hydra:
   run:
-    dir: ../logs/${now:%Y-%m-%d}/${now:%H-%M-%S}
+    dir: /root/TorchScene/logs/${now:%Y-%m-%d}/${now:%H-%M-%S}
