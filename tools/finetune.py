@@ -1,3 +1,4 @@
+# modified from https://pytorch.org/tutorials/beginner/finetuning_torchvision_models_tutorial.html
 import copy
 import logging
 import os
@@ -10,7 +11,6 @@ from torch.utils.data import DataLoader
 from torchmetrics.functional import accuracy
 from torchvision import datasets, transforms
 import torchvision.models as models
-
 from utils.meter import AverageMeter, ProgressMeter
 from utils.miscellaneous import collect_env_info, mkdir
 
@@ -22,17 +22,77 @@ def main(cfgs: DictConfig):
     logger.info("\n" + collect_env_info())
 
     # create model
+    logger.info("getting model '{}' from torch hub".format(cfgs.arch))
     model, input_size = initialize_model(
         model_name=cfgs.arch,
         num_classes=cfgs.num_classes,
         feature_extract=cfgs.feature_extract,
-        logger=logger,
         use_pretrained=cfgs.pretrained,
     )
+    logger.info("model: '{}' is successfully loaded".format(model.__class__.__name__))
+    logger.info("model structure: {}".format(model))
     # Data augmentation and normalization for training
     # Just normalization for validation
     logger.info("Initializing Datasets and Dataloaders...")
     logger.info("loading data {} from {}".format(cfgs.dataset, cfgs.data_path))
+    dataloaders_dict = load_data(
+        input_size=input_size,
+        batch_size=cfgs.batch_size,
+        data_path=cfgs.data_path,
+        num_workers=cfgs.workers
+    )
+    # Detect if we have a GPU available
+    device = torch.device(cfgs.device if torch.cuda.is_available() else "cpu")
+
+    # Gather the parameters to be optimized/updated in this run. If we are
+    #  finetuning we will be updating all parameters. However, if we are
+    #  doing feature extract method, we will only update the parameters
+    #  that we have just initialized, i.e. the parameters with requires_grad
+    #  is True.
+    params_to_update = model.parameters()
+    param_log_info = ''
+    if cfgs.feature_extract:
+        params_to_update = []
+        for name, param in model.named_parameters():
+            if param.requires_grad:
+                params_to_update.append(param)
+                param_log_info += "\t{}".format(name)
+    else:
+        for name, param in model.named_parameters():
+            if param.requires_grad:
+                param_log_info += "\t{}".format(name)
+    logger.info("Params to learn:\n" + param_log_info)
+
+    # Observe that all parameters are being optimized
+    optimizer_ft = optim.SGD(params_to_update, lr=cfgs.lr, momentum=cfgs.momentum)
+    # Setup the loss fxn
+    criterion = nn.CrossEntropyLoss()
+
+    # Train and evaluate
+    model_ft = train_model(model, dataloaders_dict, device, criterion, optimizer_ft, logger,
+                           print_freq=cfgs.print_freq, num_epochs=cfgs.epochs, is_inception=(cfgs.arch == "inception"))
+    mkdir(cfgs.weight_dir)
+    torch.save(model_ft.state_dict(), os.path.join(cfgs.weight_dir, cfgs.arch) + '.ckpt')
+    logger.info("model is saved at {}".format(os.path.abspath(os.path.join(cfgs.weight_dir, cfgs.arch) + '.ckpt')))
+
+
+def load_data(input_size, data_path, batch_size, num_workers) -> dict[DataLoader, DataLoader]:
+    """transform data and load data into dataloader. Images should be arranged in this way by default: ::
+
+        root/my_dataset/dog/xxx.png
+        root/my_dataset/dog/xxy.png
+        root/my_dataset/dog/[...]/xxz.png
+
+        root/my_dataset/cat/123.png
+        root/my_dataset/cat/nsdf3.png
+        root/my_dataset/cat/[...]/asd932_.png
+
+    Args:
+        input_size (int): transformed image resolution, such as 224.
+        data_path (string): eg. root/my_dataset/
+        batch_size (int): batch size
+        num_workers (int): number of pytorch DataLoader worker subprocess
+    """
     data_transforms = {
         'train': transforms.Compose([
             transforms.Resize(
@@ -55,54 +115,34 @@ def main(cfgs: DictConfig):
     }
 
     # Create training and validation datasets
-    image_datasets = {x: datasets.ImageFolder(os.path.join(cfgs.data_path, x), data_transforms[x]) for x in ['train', 'val']}
+    image_datasets = {x: datasets.ImageFolder(os.path.join(data_path, x), data_transforms[x]) for x in
+                      ['train', 'val']}
     # Create training and validation dataloaders
     dataloaders_dict = {
         x: torch.utils.data.DataLoader(
-            image_datasets[x], batch_size=cfgs.batch_size, shuffle=True, num_workers=cfgs.workers
+            image_datasets[x], batch_size=batch_size, shuffle=True, num_workers=num_workers
         ) for x in ['train', 'val']
     }
-    # Detect if we have a GPU available
-    device = torch.device(cfgs.device if torch.cuda.is_available() else "cpu")
-    # Send the model to GPU
-    model = model.to(device)
-
-    # Gather the parameters to be optimized/updated in this run. If we are
-    #  finetuning we will be updating all parameters. However, if we are
-    #  doing feature extract method, we will only update the parameters
-    #  that we have just initialized, i.e. the parameters with requires_grad
-    #  is True.
-    params_to_update = model.parameters()
-    param_log_info = ''
-    if cfgs.feature_extract:
-        params_to_update = []
-        for name, param in model.named_parameters():
-            if param.requires_grad:
-                params_to_update.append(param)
-                param_log_info += "\t{}".format(name)
-    else:
-        for name, param in model.named_parameters():
-            if param.requires_grad:
-                param_log_info += "\t{}".format(name)
-    logger.info("Params to learn:\n" + param_log_info)
-
-    # Observe that all parameters are being optimized
-    if cfgs.arch == 'vision_transformer':
-        optimizer_ft = optim.Adam(params_to_update, lr=cfgs.lr, weight_decay=cfgs.weight_decay)
-    else:
-        optimizer_ft = optim.SGD(params_to_update, lr=cfgs.lr, momentum=cfgs.momentum)
-    # Setup the loss fxn
-    criterion = nn.CrossEntropyLoss()
-
-    # Train and evaluate
-    model_ft = train_model(model, dataloaders_dict, device, criterion, optimizer_ft, logger,
-                                 print_freq=cfgs.print_freq, num_epochs=cfgs.epochs, is_inception=(cfgs.arch == "inception"))
-    mkdir(cfgs.weight_dir)
-    torch.save(model_ft.state_dict(), os.path.join(cfgs.weight_dir, cfgs.arch) + '.ckpt')
-    logger.info("model is saved at {}".format(os.path.abspath(os.path.join(cfgs.weight_dir, cfgs.arch) + '.ckpt')))
+    return dataloaders_dict
 
 
 def train_model(model, dataloaders, device, criterion, optimizer, logger, print_freq, num_epochs, is_inception=False):
+    """a simple train and evaluate script modified from https://pytorch.org/tutorials/beginner/finetuning_torchvision_models_tutorial.html.
+
+        Args:
+            model (nn.Module): model to be trained.
+            dataloaders (dict): should be a dict in the format of {'train': DataLoader, 'val': DataLoader}.
+            device (Any): device.
+            criterion (Any): loss function.
+            optimizer (Any): optimizer.
+            logger (Any): using logging.logger to print and log training information.
+            print_freq (int): logging frequency.eg. 10 means logger will print information when 10 batches are trained or evaluated.
+            num_epochs (int): training epochs
+            is_inception (bool): please refer to https://discuss.pytorch.org/t/how-to-optimize-inception-model-with-auxiliary-classifiers/7958
+        """
+    # Send the model to GPU
+    model = model.to(device)
+
     since = time.time()
     best_model_wts = copy.deepcopy(model.state_dict())
     for epoch in range(num_epochs):
@@ -165,7 +205,6 @@ def train_model(model, dataloaders, device, criterion, optimizer, logger, print_
                 top1.update(acc1, inputs.size(0))
                 top5.update(acc5, inputs.size(0))
 
-
                 # measure elapsed time
                 batch_time.update(time.time() - end)
                 end = time.time()
@@ -186,13 +225,18 @@ def set_parameter_requires_grad(model, feature_extracting):
             param.requires_grad = False
 
 
-def initialize_model(model_name, num_classes, feature_extract, logger, use_pretrained=True):
-    # Initialize these variables which will be set in this if statement. Each of these
-    #   variables is model specific.
+def initialize_model(model_name, num_classes, feature_extract, use_pretrained=False) -> (nn.Module, int):
+    """get models from https://pytorch.org/hub/.
 
-    logger.info("getting model '{}' from torch hub".format(model_name))
-    # Initialize these variables which will be set in this if statement. Each of these
-    #   variables is model specific.
+    Args:
+        model_name (string): model name.
+        num_classes (int): the output dimension of model classifier.
+        feature_extract (bool): if true, will freeze all the gradients.
+        use_pretrained (bool): if true, model will load pretrained weights.
+    Return:
+        model, input size.
+    """
+    # Initialize these variables which will be set in this if statement. Each of these variables is model specific.
     model_ft = None
     input_size = 0
 
