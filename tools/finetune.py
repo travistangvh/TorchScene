@@ -152,8 +152,8 @@ def train_model(model, dataloaders, device, criterion, optimizer, logger, print_
             batch_time = AverageMeter('Time', ':6.3f')
             data_time = AverageMeter('Data', ':6.3f')
             losses = AverageMeter('Loss', ':.4e')
-            top1 = AverageMeter('Acc@1', ':6.2f')
-            top5 = AverageMeter('Acc@5', ':6.2f')
+            top1 = AverageMeter('Acc@1', ':6.5f')
+            top5 = AverageMeter('Acc@5', ':6.5f')
             progress = ProgressMeter(
                 len(dataloaders[phase]),
                 [batch_time, data_time, losses, top1, top5],
