@@ -1,7 +1,6 @@
 data_path: '/home/zhz/dataset/places365_standard'
 log_dir: logs
 weight_dir: checkpoints
-
 arch: mobilenet_v2
 workers: 6
 epochs: 90
