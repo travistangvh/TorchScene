@@ -14,5 +14,3 @@ Download pretrained models from https://drive.google.com/drive/folders/1NbV3NZlg
 | vitb16    | 53.875 | 84.375  |
 
 
-## Tensoflow 2.x
-
