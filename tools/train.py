@@ -17,7 +17,7 @@ from utils.meter import AverageMeter, ProgressMeter
 from torch.utils.collect_env import get_pretty_env_info
 
 
-@hydra.main(version_base=None, config_path="../conf", config_name="basic")
+@hydra.main(version_base=None, config_path="../conf", config_name="train")
 def main(cfgs: DictConfig):
     logger = logging.getLogger(cfgs.arch)
     logger.info("Collecting env info (might take some time)")
@@ -81,17 +81,22 @@ def main(cfgs: DictConfig):
 def load_data(input_size, data_path, batch_size, num_workers) -> dict[DataLoader, DataLoader]:
     """transform data and load data into dataloader. Images should be arranged in this way by default: ::
 
-        root/my_dataset/dog/xxx.png
-        root/my_dataset/dog/xxy.png
-        root/my_dataset/dog/[...]/xxz.png
+        root/my_dataset/train/dog/xxx.png
+        root/my_dataset/train/dog/xxy.png
+        root/my_dataset/train/dog/[...]/xxz.png
 
-        root/my_dataset/cat/123.png
-        root/my_dataset/cat/nsdf3.png
-        root/my_dataset/cat/[...]/asd932_.png
+        root/my_dataset/val/cat/123.png
+        root/my_dataset/val/cat/nsdf3.png
+        root/my_dataset/val/cat/[...]/asd932_.png
+
+
+    notice that the directory of your training data must be names as 'train', and
+    the directory name of your validation data must be named as 'val', and they should
+    under the same directory.
 
     Args:
         input_size (int): transformed image resolution, such as 224.
-        data_path (string): eg. root/my_dataset/
+        data_path (string): eg. xx/my_dataset/
         batch_size (int): batch size
         num_workers (int): number of pytorch DataLoader worker subprocess
     """
@@ -381,6 +386,7 @@ def adjust_learning_rate(optimizer, epoch, cfgs):
     lr = cfgs['lr'] * (0.1 ** (epoch // 30))
     for param_group in optimizer.param_groups:
         param_group['lr'] = lr
+
 
 if __name__ == "__main__":
     main()
