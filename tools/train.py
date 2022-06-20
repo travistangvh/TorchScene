@@ -335,10 +335,19 @@ def initialize_model(model_name, num_classes, feature_extract, use_pretrained=Fa
         model_ft.num_classes = num_classes
         input_size = 224
 
-    elif model_name == "densenet":
-        """ Densenet
+    elif model_name == "densenet121":
+        """ Densenet121
         """
         model_ft = models.densenet121(pretrained=use_pretrained)
+        set_parameter_requires_grad(model_ft, feature_extract)
+        num_ftrs = model_ft.classifier.in_features
+        model_ft.classifier = nn.Linear(num_ftrs, num_classes)
+        input_size = 224
+
+    elif model_name == "densenet161":
+        """ Densenet161
+        """
+        model_ft = models.densenet161(pretrained=use_pretrained)
         set_parameter_requires_grad(model_ft, feature_extract)
         num_ftrs = model_ft.classifier.in_features
         model_ft.classifier = nn.Linear(num_ftrs, num_classes)
