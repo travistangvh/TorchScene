@@ -15,6 +15,7 @@ from torchvision import datasets, transforms
 import torchvision.models as models
 from utils.meter import AverageMeter, ProgressMeter
 from torch.utils.collect_env import get_pretty_env_info
+from torch.utils.tensorboard import SummaryWriter
 
 
 @hydra.main(version_base=None, config_path="../conf", config_name="train")
@@ -22,7 +23,7 @@ def main(cfgs: DictConfig):
     logger = logging.getLogger(cfgs.arch)
     logger.info("Collecting env info (might take some time)")
     logger.info("\n" + collect_env_info())
-
+    writer = SummaryWriter(os.path.join(cfgs.tensorborad_log_dir, time.ctime().replace(' ', '_').replace(':', '-')))
     # create model
     logger.info("getting model '{}' from torch hub".format(cfgs.arch))
     model, input_size = initialize_model(
@@ -72,7 +73,9 @@ def main(cfgs: DictConfig):
 
     # Train and evaluate
     model_ft = train_model(model, dataloaders_dict, device, criterion, optimizer_ft, logger,
-                           print_freq=cfgs.print_freq, num_epochs=cfgs.epochs, is_inception=(cfgs.arch == "inception"))
+                           print_freq=cfgs.print_freq, num_epochs=cfgs.epochs, is_inception=(cfgs.arch == "inception"),
+                           tensorboard_plugin=writer
+                           )
     mkdir(cfgs.weight_dir)
     torch.save(model_ft.state_dict(), os.path.join(cfgs.weight_dir, cfgs.arch) + '.ckpt')
     logger.info("model is saved at {}".format(os.path.abspath(os.path.join(cfgs.weight_dir, cfgs.arch) + '.ckpt')))
@@ -133,7 +136,7 @@ def load_data(input_size, data_path, batch_size, num_workers) -> dict[DataLoader
     return dataloaders_dict
 
 
-def train_model(model, dataloaders, device, criterion, optimizer, logger, print_freq, num_epochs, is_inception=False):
+def train_model(model, dataloaders, device, criterion, optimizer, logger, print_freq, num_epochs, tensorboard_plugin=None, is_inception=False):
     """a simple train and evaluate script modified from https://pytorch.org/tutorials/beginner/finetuning_torchvision_models_tutorial.html.
 
         Args:
@@ -145,11 +148,11 @@ def train_model(model, dataloaders, device, criterion, optimizer, logger, print_
             logger (Any): using logging.logger to print and log training information.
             print_freq (int): logging frequency.eg. 10 means logger will print information when 10 batches are trained or evaluated.
             num_epochs (int): training epochs
+            tensorboard_plugin(Any): torch.utils.tensorboard.SummaryWriter
             is_inception (bool): please refer to https://discuss.pytorch.org/t/how-to-optimize-inception-model-with-auxiliary-classifiers/7958
         """
     # Send the model to GPU
     model = model.to(device)
-
     since = time.time()
     best_model_wts = copy.deepcopy(model.state_dict())
     for epoch in range(num_epochs):
@@ -211,6 +214,14 @@ def train_model(model, dataloaders, device, criterion, optimizer, logger, print_
                 losses.update(loss.item(), inputs.size(0))
                 top1.update(acc1, inputs.size(0))
                 top5.update(acc5, inputs.size(0))
+                if phase == 'train':
+                    tensorboard_plugin.add_scalar('loss/train', loss, i)
+                    tensorboard_plugin.add_scalar('acc1/train', acc1, i)
+                    tensorboard_plugin.add_scalar('acc5/train', acc5, i)
+                else:
+                    tensorboard_plugin.add_scalar('loss/val', loss, i)
+                    tensorboard_plugin.add_scalar('acc1/val', acc1, i)
+                    tensorboard_plugin.add_scalar('acc5/val', acc5, i)
 
                 # measure elapsed time
                 batch_time.update(time.time() - end)
