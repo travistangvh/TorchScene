@@ -16,7 +16,7 @@ from deprecated.deprecated_miscellaneous import load_configs, collect_env_info, 
 from utils.distributed import get_rank
 from deprecated.deprecated_logger import setup_logger
 from utils.meter import AverageMeter, ProgressMeter
-from deprecated.deprecated_metric import accuracy
+from utils.metric import accuracy
 import deprecated.wideresnet as wideresnet
 
 CONFIG_FILE = 'basic.yml'
@@ -26,6 +26,7 @@ best_acc1 = 0
 model_names = sorted(name for name in models.__dict__
     if name.islower() and not name.startswith("__")
     and callable(models.__dict__[name]))
+
 
 def main():
     os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"

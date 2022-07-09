@@ -2,20 +2,19 @@
 import copy
 import logging
 import os
-import errno
 import time
 import hydra
 import torch
-import PIL
 from omegaconf import DictConfig
 from torch import nn, optim
 from torch.utils.data import DataLoader
 from torchmetrics.functional import accuracy
 from torchvision import datasets, transforms
-import torchvision.models as models
 from utils.meter import AverageMeter, ProgressMeter
-from torch.utils.collect_env import get_pretty_env_info
 from torch.utils.tensorboard import SummaryWriter
+
+from utils.miscellaneous import mkdir, collect_env_info
+from utils.model_zoo import initialize_model
 
 
 @hydra.main(version_base=None, config_path="../conf", config_name="train")
@@ -235,177 +234,6 @@ def train_model(model, dataloaders, device, criterion, optimizer, logger, print_
     model.load_state_dict(best_model_wts)
 
     return model
-
-
-def set_parameter_requires_grad(model, feature_extracting):
-    if feature_extracting:
-        for param in model.parameters():
-            param.requires_grad = False
-
-
-def initialize_model(model_name, num_classes, feature_extract, use_pretrained=False) -> (nn.Module, int):
-    """get models from https://pytorch.org/hub/.
-
-    Args:
-        model_name (string): model name.
-        num_classes (int): the output dimension of model classifier.
-        feature_extract (bool): if true, will freeze all the gradients.
-        use_pretrained (bool): if true, model will load pretrained weights.
-    Return:
-        model, input size.
-    """
-    # Initialize these variables which will be set in this if statement. Each of these variables is model specific.
-    model_ft = None
-    input_size = 0
-
-    if model_name == "resnet18":
-        """ Resnet18
-        """
-        model_ft = models.resnet18(pretrained=use_pretrained)
-
-        set_parameter_requires_grad(model_ft, feature_extract)
-        num_ftrs = model_ft.fc.in_features
-        model_ft.fc = nn.Linear(num_ftrs, num_classes)
-        input_size = 224
-
-    if model_name == "resnet34":
-        """ Resnet34
-        """
-        model_ft = models.resnet34(pretrained=use_pretrained)
-
-        set_parameter_requires_grad(model_ft, feature_extract)
-        num_ftrs = model_ft.fc.in_features
-        model_ft.fc = nn.Linear(num_ftrs, num_classes)
-        input_size = 224
-
-    if model_name == "resnet50":
-        """ Resnet50
-        """
-        model_ft = models.resnet50(pretrained=use_pretrained)
-
-        set_parameter_requires_grad(model_ft, feature_extract)
-        num_ftrs = model_ft.fc.in_features
-        model_ft.fc = nn.Linear(num_ftrs, num_classes)
-        input_size = 224
-
-    if model_name == "resnet101":
-        """ Resnet101
-        """
-        model_ft = models.resnet101(pretrained=use_pretrained)
-
-        set_parameter_requires_grad(model_ft, feature_extract)
-        num_ftrs = model_ft.fc.in_features
-        model_ft.fc = nn.Linear(num_ftrs, num_classes)
-        input_size = 224
-
-    if model_name == "resnet152":
-        """ Resnet152
-        """
-        model_ft = models.resnet152(pretrained=use_pretrained)
-
-        set_parameter_requires_grad(model_ft, feature_extract)
-        num_ftrs = model_ft.fc.in_features
-        model_ft.fc = nn.Linear(num_ftrs, num_classes)
-        input_size = 224
-
-    elif model_name == "alexnet":
-        """ Alexnet
-        """
-        model_ft = models.alexnet(pretrained=use_pretrained)
-        set_parameter_requires_grad(model_ft, feature_extract)
-        num_ftrs = model_ft.classifier[6].in_features
-        model_ft.classifier[6] = nn.Linear(num_ftrs, num_classes)
-        input_size = 224
-
-    elif model_name == "vgg":
-        """ VGG11_bn
-        """
-        model_ft = models.vgg11_bn(pretrained=use_pretrained)
-        set_parameter_requires_grad(model_ft, feature_extract)
-        num_ftrs = model_ft.classifier[6].in_features
-        model_ft.classifier[6] = nn.Linear(num_ftrs, num_classes)
-        input_size = 224
-
-    elif model_name == "squeezenet":
-        """ Squeezenet
-        """
-        model_ft = models.squeezenet1_0(pretrained=use_pretrained)
-        set_parameter_requires_grad(model_ft, feature_extract)
-        model_ft.classifier[1] = nn.Conv2d(512, num_classes, kernel_size=(1, 1), stride=(1, 1))
-        model_ft.num_classes = num_classes
-        input_size = 224
-
-    elif model_name == "densenet121":
-        """ Densenet121
-        """
-        model_ft = models.densenet121(pretrained=use_pretrained)
-        set_parameter_requires_grad(model_ft, feature_extract)
-        num_ftrs = model_ft.classifier.in_features
-        model_ft.classifier = nn.Linear(num_ftrs, num_classes)
-        input_size = 224
-
-    elif model_name == "densenet161":
-        """ Densenet161
-        """
-        model_ft = models.densenet161(pretrained=use_pretrained)
-        set_parameter_requires_grad(model_ft, feature_extract)
-        num_ftrs = model_ft.classifier.in_features
-        model_ft.classifier = nn.Linear(num_ftrs, num_classes)
-        input_size = 224
-
-    elif model_name == "inception":
-        """ Inception v3
-        Be careful, expects (299,299) sized images and has auxiliary output
-        """
-        model_ft = models.inception_v3(pretrained=use_pretrained)
-        set_parameter_requires_grad(model_ft, feature_extract)
-        # Handle the auxilary net
-        num_ftrs = model_ft.AuxLogits.fc.in_features
-        # Handle the primary net
-        num_ftrs = model_ft.fc.in_features
-        model_ft.fc = nn.Linear(num_ftrs, num_classes)
-        input_size = 299
-
-    elif model_name == "vision_transformer":
-        """ Vision Transformer base 16
-        """
-        model_ft = models.vit_b_16(pretrained=use_pretrained)
-        set_parameter_requires_grad(model_ft, feature_extract)
-        # Handle the primary net
-        num_ftrs = model_ft.hidden_dim
-        model_ft.heads = nn.Linear(num_ftrs, num_classes)
-        input_size = 224
-
-    else:
-        print("Invalid model name, exiting...")
-        exit()
-
-    return model_ft, input_size
-
-
-def mkdir(path):
-    try:
-        os.makedirs(path)
-    except OSError as e:
-        if e.errno != errno.EEXIST:
-            raise
-
-
-def get_pil_version():
-    return "\n        Pillow ({})".format(PIL.__version__)
-
-
-def collect_env_info():
-    env_str = get_pretty_env_info()
-    env_str += get_pil_version()
-    return env_str
-
-
-def adjust_learning_rate(optimizer, epoch, cfgs):
-    """Sets the learning rate to the initial LR decayed by 10 every 30 epochs"""
-    lr = cfgs['lr'] * (0.1 ** (epoch // 30))
-    for param_group in optimizer.param_groups:
-        param_group['lr'] = lr
 
 
 if __name__ == "__main__":
