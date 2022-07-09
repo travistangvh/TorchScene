@@ -12,5 +12,6 @@ Download pretrained models from https://drive.google.com/drive/folders/1NbV3NZlg
 | mobilenet_v2   | 51.214 | 81.866 |
 | densenet161    | 56.540 | 86.375  |
 | vitb16    | 53.875 | 84.375  |
+| MoCo-v2 Resnet50    | 49.087 | 80.372  |
 
 
