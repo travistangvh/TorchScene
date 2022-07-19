@@ -17,4 +17,5 @@ dataset: places365
 
 hydra:
   run:
-    dir: /root/TorchScene/logs/finetune/${now:%Y-%m-%d}/${now:%H-%M-%S}
+    dir: /root/TorchScene/logs/train/${now:%Y-%m-%d}/${now:%H-%M-%S}
+tensorborad_log_dir: /root/TorchScene/logs/tensor_board
