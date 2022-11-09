@@ -7,8 +7,11 @@ A scene recognition tool based on pytorch
 ```bash
 conda env create -f environment.yml python=3.9
 
-conda activate torch-scene
 
+conda activate torch-scene
+pip install tensorboard==2.7.0
+conda install pytorch==1.11.0 torchvision==0.12.0 -c pytorch
+conda install -y -c conda-forge tensorboard
 export PYTHONPATH=$PYTHONPATH:$(pwd)
 ```
 

@@ -1,0 +1,5 @@
+img_path: /Users/travistang/Documents/TorchScene/images/433203573_Go-Biz_20220705_021039.jpeg
+device: cuda:0
+weight_path: D:/TorchScene/checkpoints/resnet18_places365.pt
+arch: resnet18
+categories_map_dir: /Users/travistang/Documents/TorchScene/categories_places365.txt

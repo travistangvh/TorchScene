@@ -10,11 +10,11 @@ from torch import nn, optim
 from torch.utils.data import DataLoader
 from torchmetrics.functional import accuracy
 from torchvision import datasets, transforms
-from utils.meter import AverageMeter, ProgressMeter
+from meter import AverageMeter, ProgressMeter
 from torch.utils.tensorboard import SummaryWriter
 
-from utils.miscellaneous import mkdir, collect_env_info
-from utils.model_zoo import initialize_model
+from miscellaneous import mkdir, collect_env_info
+from model_zoo import initialize_model
 
 
 @hydra.main(version_base=None, config_path="../conf", config_name="train")

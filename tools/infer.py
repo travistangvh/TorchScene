@@ -4,7 +4,7 @@ from omegaconf import DictConfig
 import torch
 from torchvision import transforms
 from PIL import Image
-from tools.train import initialize_model
+from train import initialize_model
 import os
 
 
@@ -17,9 +17,9 @@ def main(cfgs: DictConfig):
     logger = logging.getLogger('model inference')
     logger.info("infer on device:{}".format(device))
     model, input_size = initialize_model(cfgs.arch, num_classes=365, feature_extract=False, use_pretrained=False)
-    torch.save(model.state_dict(), os.path.join("/root/TorchScene/checkpoints/", cfgs.arch) + '.pt')
+    # torch.save(model.state_dict(), '/Users/travistang/Documents/TorchScene/D:/TorchScene/checkpoints/resnet18.pt')
     logger.info("loading model weights from {}".format(cfgs.weight_path))
-    model.load_state_dict(torch.load(cfgs.weight_path))
+    model.load_state_dict(torch.load('/Users/travistang/Documents/TorchScene/model/resnet18.pt'))
     logger.info("loading successfully.")
     model = model.to(device)
     model.eval()

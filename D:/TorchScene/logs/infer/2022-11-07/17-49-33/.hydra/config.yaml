@@ -1,0 +1,5 @@
+img_path: D:/TorchScene/imgs/12.jpg
+device: cuda:0
+weight_path: D:\TorchScene\checkpoints\vision_transformer1654506720.0398195.ckpt
+arch: vision_transformer
+categories_map_dir: D:/TorchScene/categories_places365.txt

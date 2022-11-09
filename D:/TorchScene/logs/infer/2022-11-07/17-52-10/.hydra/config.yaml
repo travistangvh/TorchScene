@@ -1,0 +1,5 @@
+img_path: D:/TorchScene/imgs/12.jpg
+device: cuda:0
+weight_path: D:\TorchScene\checkpoints\mobilenet_v2_places365.pt
+arch: mobilenet_v2
+categories_map_dir: D:/TorchScene/categories_places365.txt

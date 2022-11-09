@@ -1,0 +1,5 @@
+img_path: /Users/travistang/Documents/TorchScene/data/images/victor_set/G000025204.jpeg
+device: cuda:0
+weight_path: /Users/travistang/Documents/TorchScene/model/resnet18.pt
+arch: resnet18
+categories_map_dir: /Users/travistang/Documents/TorchScene/categories_places365.txt

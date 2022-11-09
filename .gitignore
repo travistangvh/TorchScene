@@ -134,3 +134,7 @@ places365_standard/
 .vscode/
 official/
 *.pt
+
+# Files
+*.jpeg
+*.jpg
