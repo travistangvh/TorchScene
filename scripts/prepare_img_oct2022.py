@@ -26,5 +26,5 @@ if __name__ == '__main__':
 
     oct2022_data = pd.concat([gooddata_img_df[['outlet_id','restaurant_photo_url','set','inappropriate_prob_tpot_221109']], 
                         baddata_img_df[['outlet_id','restaurant_photo_url','set','inappropriate_prob_tpot_221109']]])
-    
+    oct2022_data = oct2022_data.reset_index(drop=True)
     oct2022_data.to_csv('/Users/travistang/Documents/TorchScene/result/intermediate/tpot_221109 122pm/df_prediction_result_oct2022.csv')
