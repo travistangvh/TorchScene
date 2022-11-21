@@ -139,3 +139,7 @@ official/
 *.jpeg
 *.jpg
 *.csv
+*.png 
+*.zip
+*.webp
+*.gif
